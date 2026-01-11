@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BST Construction Visualizer</title>
+</head>
+<body>
+    <center>
+        <h1>Binary Search Tree Visualizer</h1>
+        <p>Build and explore BST structure interactively</p>
+        <hr>
+        
+        <table>
+            <tr>
+                <td><input type="number" id="nodeValue" placeholder="Enter value" size="15" /></td>
+                <td><button onclick="insertNode()">Insert Node</button></td>
+                <td><button onclick="deleteNode()">Delete Node</button></td>
+                <td><button onclick="clearTree()">Clear Tree</button></td>
+                <td><button onclick="insertRandom()">Random Insert</button></td>
+            </tr>
+        </table>
+        
+        <hr>
+        
+        <canvas id="treeCanvas" width="1000" height="600"></canvas>
+        
+        <hr>
+        
+        <table border="1" cellpadding="10" cellspacing="0">
+            <tr>
+                <th>Total Nodes</th>
+                <th>Tree Height</th>
+                <th>Root Value</th>
+            </tr>
+            <tr>
+                <td><span id="nodeCount">0</span></td>
+                <td><span id="treeHeight">0</span></td>
+                <td><span id="rootValue">-</span></td>
+            </tr>
+        </table>
+        
+        <hr>
+        
+        <h3>Tree Traversals</h3>
+        <table border="1" cellpadding="10" cellspacing="0" width="80%">
+            <tr>
+                <th>Traversal Type</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td><b>In-Order</b></td>
+                <td><span id="inorder">-</span></td>
+            </tr>
+            <tr>
+                <td><b>Pre-Order</b></td>
+                <td><span id="preorder">-</span></td>
+            </tr>
+            <tr>
+                <td><b>Post-Order</b></td>
+                <td><span id="postorder">-</span></td>
+            </tr>
+        </table>
+        
+        <hr>
+        
+        <table width="80%">
+            <tr>
+                <td>
+                    <h3>About Binary Search Trees</h3>
+                    <p align="left">
+                        A Binary Search Tree (BST) is a node-based data structure where each node has at most two children. 
+                        The left subtree contains values less than the parent node, and the right subtree contains values greater than the parent node. 
+                        This property makes BSTs efficient for searching, insertion, and deletion operations.
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </center>
+
+    <script>
+        class TreeNode {
+            constructor(val) {
+                this.val = val;
+                this.left = null;
+                this.right = null;
+                this.x = 0;
+                this.y = 0;
+            }
+        }
+
+        let root = null;
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        const NODE_RADIUS = 25;
+        const LEVEL_HEIGHT = 80;
+        const MIN_HORIZONTAL_SPACING = 60;
+
+        function insert(node, val) {
+            if (!node) return new TreeNode(val);
+            if (val < node.val) node.left = insert(node.left, val);
+            else if (val > node.val) node.right = insert(node.right, val);
+            return node;
+        }
+
+        function deleteNodeFromTree(node, val) {
+            if (!node) return null;
+            
+            if (val < node.val) {
+                node.left = deleteNodeFromTree(node.left, val);
+            } else if (val > node.val) {
+                node.right = deleteNodeFromTree(node.right, val);
+            } else {
+                if (!node.left) return node.right;
+                if (!node.right) return node.left;
+                
+                let minNode = findMin(node.right);
+                node.val = minNode.val;
+                node.right = deleteNodeFromTree(node.right, minNode.val);
+            }
+            return node;
+        }
+
+        function findMin(node) {
+            while (node.left) node = node.left;
+            return node;
+        }
+
+        function insertNode() {
+            const val = parseInt(document.getElementById('nodeValue').value);
+            if (isNaN(val)) {
+                alert('Please enter a valid number');
+                return;
+            }
+            root = insert(root, val);
+            document.getElementById('nodeValue').value = '';
+            updateVisualization();
+        }
+
+        function deleteNode() {
+            const val = parseInt(document.getElementById('nodeValue').value);
+            if (isNaN(val)) {
+                alert('Please enter a valid number to delete');
+                return;
+            }
+            root = deleteNodeFromTree(root, val);
+            document.getElementById('nodeValue').value = '';
+            updateVisualization();
+        }
+
+        function clearTree() {
+            root = null;
+            updateVisualization();
+        }
+
+        function insertRandom() {
+            const val = Math.floor(Math.random() * 100) + 1;
+            root = insert(root, val);
+            updateVisualization();
+        }
+
+        function calculatePositions(node, x, y, horizontalSpacing) {
+            if (!node) return;
+            node.x = x;
+            node.y = y;
+            const newSpacing = horizontalSpacing / 2;
+            if (node.left) calculatePositions(node.left, x - horizontalSpacing, y + LEVEL_HEIGHT, newSpacing);
+            if (node.right) calculatePositions(node.right, x + horizontalSpacing, y + LEVEL_HEIGHT, newSpacing);
+        }
+
+        function countNodes(node) {
+            if (!node) return 0;
+            return 1 + countNodes(node.left) + countNodes(node.right);
+        }
+
+        function calculateTreeHeight(node) {
+            if (!node) return 0;
+            return 1 + Math.max(calculateTreeHeight(node.left), calculateTreeHeight(node.right));
+        }
+
+        function drawTree() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!root) return;
+            
+            const treeWidth = Math.pow(2, calculateTreeHeight(root)) * MIN_HORIZONTAL_SPACING;
+            calculatePositions(root, canvas.width / 2, 50, treeWidth / 4);
+            drawNode(root);
+        }
+
+        function drawNode(node) {
+            if (!node) return;
+
+            if (node.left) {
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(node.left.x, node.left.y);
+                ctx.stroke();
+                drawNode(node.left);
+            }
+
+            if (node.right) {
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(node.right.x, node.right.y);
+                ctx.stroke();
+                drawNode(node.right);
+            }
+
+            ctx.fillStyle = '#4169E1';
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.val, node.x, node.y);
+        }
+
+        function inorderTraversal(node, result = []) {
+            if (!node) return result;
+            inorderTraversal(node.left, result);
+            result.push(node.val);
+            inorderTraversal(node.right, result);
+            return result;
+        }
+
+        function preorderTraversal(node, result = []) {
+            if (!node) return result;
+            result.push(node.val);
+            preorderTraversal(node.left, result);
+            preorderTraversal(node.right, result);
+            return result;
+        }
+
+        function postorderTraversal(node, result = []) {
+            if (!node) return result;
+            postorderTraversal(node.left, result);
+            postorderTraversal(node.right, result);
+            result.push(node.val);
+            return result;
+        }
+
+        function updateTraversals() {
+            const inorder = inorderTraversal(root);
+            const preorder = preorderTraversal(root);
+            const postorder = postorderTraversal(root);
+
+            document.getElementById('inorder').textContent = inorder.length ? inorder.join(' -> ') : '-';
+            document.getElementById('preorder').textContent = preorder.length ? preorder.join(' -> ') : '-';
+            document.getElementById('postorder').textContent = postorder.length ? postorder.join(' -> ') : '-';
+        }
+
+        function updateStats() {
+            document.getElementById('nodeCount').textContent = countNodes(root);
+            document.getElementById('treeHeight').textContent = calculateTreeHeight(root);
+            document.getElementById('rootValue').textContent = root ? root.val : '-';
+        }
+
+        function updateVisualization() {
+            drawTree();
+            updateTraversals();
+            updateStats();
+        }
+
+        document.getElementById('nodeValue').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') insertNode();
+        });
+
+        drawTree();
+    </script>
+</body>
+</html>
